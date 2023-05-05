@@ -52,9 +52,9 @@ public class UserIntegrationTest {
         chromeDriver.get("http://localhost:"+ port +"/users");
         String title = chromeDriver.getTitle();
         assertEquals("Usuarios", title);
+        WebElement table = chromeDriver.findElement(By.className("table"));
         WebElement button = chromeDriver.findElement(By.id("users-button-create"));
         button.click();
-        WebElement table = chromeDriver.findElement(By.className("table"));
     }
 
     /*Test que comprueba que la pag locaalhost:+puerto+/newUser es la pagina
@@ -76,9 +76,9 @@ public class UserIntegrationTest {
         chromeDriver.get("http://localhost:"+ port +"/draws");
         String title = chromeDriver.getTitle();
         assertEquals("Sorteos", title);
-        WebElement button = chromeDriver.findElement(By.id("create-user-button"));
+        WebElement table = chromeDriver.findElement(By.className("table"));
+        WebElement button = chromeDriver.findElement(By.id("create-draw-button"));
         button.click();
-        WebElement table = chromeDriver.findElement(By.id("draw-list-table"));
     }
 
     //Mismo test que testNewUser para Crear sorteos
