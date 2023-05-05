@@ -76,7 +76,7 @@ public class UserIntegrationTest {
         chromeDriver.get("http://localhost:"+ port +"/draws");
         String title = chromeDriver.getTitle();
         assertEquals("Sorteos", title);
-        WebElement button = chromeDriver.findElement(By.className("button is-primary"));
+        WebElement button = chromeDriver.findElement(By.id("create-user-button"));
         button.click();
         WebElement table = chromeDriver.findElement(By.id("draw-list-table"));
     }
