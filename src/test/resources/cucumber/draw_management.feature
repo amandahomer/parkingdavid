@@ -6,3 +6,11 @@ Característica: Gestion de sorteos
     Cuando el usuario hace click sobre el botón de Sorteos
     Entonces esta en la pagina de lista de sorteos
   
+  #Caso positivo crear sorteo
+  
+  Escenario: Crear un sorteo correctamente
+    Dado un usuario esta en la pagina creación de sorteos
+    Cuando relleno el campo descripcion con sorteo1
+    Y el usuario hace click sobre el botón de crear
+    Entonces esta en la pagina de lista de sorteos
+    #Y se ha persistido el sorteo en la base de datos

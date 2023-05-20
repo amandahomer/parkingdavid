@@ -1,5 +1,6 @@
 package com.hormigo.david.parkingmanager.bdd.steps;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -9,6 +10,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
@@ -39,6 +41,7 @@ import io.cucumber.java.es.Cuando;
 import io.cucumber.java.es.Dado;
 import io.cucumber.java.es.Entonces;
 import io.cucumber.spring.CucumberContextConfiguration;
+import io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension;
 
 @CucumberContextConfiguration
 public class CucumberSteps extends CucumberConfiguration {
@@ -81,13 +84,10 @@ public class CucumberSteps extends CucumberConfiguration {
 
     }
 
-    @Dado("el correo {} no esta asignado a otro usuario")
-    public void mockUserNotExists(String email){
-        when(mockedUserService.userExists(email)).thenReturn(false);
-        when(mockedRepository.findByEmail(email)).thenReturn(null);
-        
+    @Dado("el correo {} {} esta asignado a otro usuario")
+    public void mockUserNotExists(String email, String siONo){
+        opcionAsignado(email, siONo);
     }
-
 
     @Cuando("relleno el campo {} con {}")
     public void populateField(String fieldName, String fieldValue) {
@@ -97,21 +97,13 @@ public class CucumberSteps extends CucumberConfiguration {
 
     @Cuando("el usuario hace click sobre el botón de {}")
     public void clickButton(String buttonName) {
-        String buttonId = "";
-        switch (buttonName) {
-            case "Usuarios":
-                buttonId = "to-users-link";
-                break;
-            case "Sorteos":
-                buttonId = "to-draws-link";
-                break;
-            case "crear usuario":
-                buttonId = "user-create-button-submit";
-                break;
-            default:
-                break;
-        }
-        driver.findElement(By.id(buttonId)).click();
+        buttonId(buttonName);
+    }
+
+    @Cuando("dejo en blanco el campo {}")
+    public void campoEnBlanco(String campo){
+        WebElement campoVacio = driver.findElement(By.id(getFieldIdFromName(campo)));
+        campoVacio.clear();
     }
 
     @Entonces("esta en la pagina de {}")
@@ -120,11 +112,10 @@ public class CucumberSteps extends CucumberConfiguration {
         assertTrue(driver.getCurrentUrl().equals(getUrlFromPageName(pageName)));
     }
 
-    @Entonces("se ha persistido el usuario en la base de datos")
-    public void checkUserWasSaved() {
-        verify(mockedRepository, times(1)).save(any(User.class));
+    @Entonces("{} se ha persistido el usuario en la base de datos")
+    public void guardaONoUsuario(String siONo) {
+        opcionGuardaEnBaseDatos(siONo);
     }
-
 
     @Entonces("se muestra un campo de {}")
     public void fieldIsDisplayed(String fieldName) {
@@ -132,6 +123,19 @@ public class CucumberSteps extends CucumberConfiguration {
         WebElement field = driver.findElement(By.id(fieldId));
 
         assertTrue(field.isDisplayed());
+    }
+
+    @Entonces("se muestra un mensaje de error para {}")
+    public void mensajeError(String campo){
+        WebElement error = driver.findElement(By.className("notification"));
+        errorCampo(campo, error);
+    }
+
+    @Entonces("no se ha navegado")
+    public void noNavega(){
+        String url = getUrlFromPageName("creación de usuarios");
+        driver.get(url);
+        assertEquals(url,driver.getCurrentUrl());
     }
 
     private String getUrlFromPageName(String pageName) {
@@ -148,6 +152,9 @@ public class CucumberSteps extends CucumberConfiguration {
                 break;
             case "creación de usuarios":
                 endPoint = "/newUser";
+                break;
+            case "creación de sorteos":
+                endPoint = "/newDraw";
                 break;
             default:
                 break;
@@ -170,6 +177,9 @@ public class CucumberSteps extends CucumberConfiguration {
             case "segundo apellido":
                 fieldId = "user-create-field-lastname2";
                 break;
+            case "descripcion":
+                fieldId = "draw-field-description";
+                break;
             default:
                 break;
         }
@@ -178,6 +188,64 @@ public class CucumberSteps extends CucumberConfiguration {
 
     private String getUrlFromEndPoint(String endpoint) {
         return "http://localhost:" + port + endpoint;
+    }
+
+    private void buttonId(String buttonName) {
+        String buttonId = "";
+        switch (buttonName) {
+            case "Usuarios":
+                buttonId = "to-users-link";
+                break;
+            case "Sorteos":
+                buttonId = "to-draws-link";
+                break;
+            case "crear usuario":
+                buttonId = "user-create-button-submit";
+                break;
+            case "crear":
+                buttonId = "draw-button-submit";
+            default:
+                break;
+        }
+        driver.findElement(By.id(buttonId)).click();
+    }
+
+    private void opcionAsignado(String email, String siONo) {
+        if(siONo.equals("no")){
+            when(mockedUserService.userExists(email)).thenReturn(false);
+            when(mockedRepository.findByEmail(email)).thenReturn(null);
+        }
+        if(siONo.equals("si")){
+            when(mockedUserService.userExists(email)).thenReturn(true);
+            when(mockedRepository.findByEmail(email)).thenReturn(new User());
+        }
+    }
+
+    private void opcionGuardaEnBaseDatos(String siONo) {
+        if(siONo.equals("si")){
+            verify(mockedRepository, times(1)).save(any(User.class));
+        }
+        if(siONo.equals("no")){
+            verifyNoInteractions(mockedUserService);
+        }
+    }
+
+    private void errorCampo(String campo, WebElement error) {
+        String texto = "";
+        switch(campo){
+            case "correo":
+                texto = error.getText();
+                assertEquals("El correo es obligatorio",texto);
+                break;
+            case "nombre":
+                texto = error.getText();
+                assertEquals("El nombre es obligatorio",texto);
+                break;
+            case "primer apellido":
+                texto = error.getText();
+                assertEquals("El primer apellido es obligatorio",texto);
+                break;
+        }
     }
 
 }
