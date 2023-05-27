@@ -11,6 +11,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.hormigo.david.parkingmanager.core.exceptions.UserExistsException;
 import com.hormigo.david.parkingmanager.user.domain.Role;
 import com.hormigo.david.parkingmanager.user.domain.User;
 import com.hormigo.david.parkingmanager.user.domain.UserDao;
@@ -26,6 +27,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -65,4 +68,99 @@ public class UserControllerTest {
                     
 
     }
+
+    @Test
+    public void testLeerUsuarios() throws Exception{
+        ObjectMapper mapper = new ObjectMapper();
+        ArrayList<User> listaUsusarios = new ArrayList<>();
+        listaUsusarios.add(new User("amanda@lamejor.es","Amanda","Navas","Rodriguez",Role.PROFESSOR));
+        listaUsusarios.add(new User("homer@jsimpson.es","Homer","J","Simpson",Role.STUDENT));
+        String json = mapper.writeValueAsString(listaUsusarios);
+        json = "{ \"_embedded\": {\"userList\":" + json + "}}";
+        when(this.userService.getAll()).thenReturn(listaUsusarios);
+        this.mockMvc.perform(get("/api/users"))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(content().json(json));
+    }
+
+    @Test
+    public void borrarUsuario() throws Exception{
+        User usuario = new User("amanda@lamejor.es","Amanda","Navas","Rodriguez",Role.PROFESSOR);
+        when(userService.getUser(3)).thenReturn(Optional.of(usuario));
+        this.mockMvc.perform(delete("/api/users/3"))
+                    .andDo(print())
+                    .andExpect(status().is(204));
+    }
+
+    @Test
+    public void crearUsuarioEmailVacio() throws Exception{
+        ObjectMapper mapper = new ObjectMapper();
+        User usuario = new User("","Amanda","Navas","Rodriguez",Role.PROFESSOR);        
+        String json = mapper.writeValueAsString(usuario);
+        when(userService.register(any(UserDao.class))).thenReturn(null);
+        this.mockMvc.perform(post("/api/users")
+                    .contentType("application/json").content(json))
+                    .andDo(print())
+                    .andExpect(status().is(422))
+                    .andExpect(content().string("El correo es obligatorio\n"));
+    }
+
+    @Test
+    public void crearUsuarioEmailRepetido() throws Exception{
+        ObjectMapper mapper = new ObjectMapper();
+        User usuario = new User("amanda@lamejor.es","Amanda","Navas","Rodriguez",Role.PROFESSOR);        
+        String json = mapper.writeValueAsString(usuario);
+        //No se como poner que devuelva que ya existe un usuario con ese correo
+        when(userService.register(any(UserDao.class))).thenThrow(UserExistsException.class);
+        this.mockMvc.perform(post("/api/users")
+                    .contentType("application/json").content(json))
+                    .andDo(print())
+                    .andExpect(status().is(406))
+                    .andExpect(content().string("Ya existe un usuario con el correo"));
+    }               
+
+    @Test
+    public void crearUsuarioNombreVacio() throws Exception{
+        ObjectMapper mapper = new ObjectMapper();
+        User usuario = new User("amanda@lamejor.es","","Navas","Rodriguez",Role.PROFESSOR);        
+        String json = mapper.writeValueAsString(usuario);
+        when(this.userService.register(any(UserDao.class))).thenReturn(null);
+        this.mockMvc.perform(post("/api/users")
+                    .contentType("application/json").content(json))
+                    .andDo(print())
+                    .andExpect(status().is(422))
+                    .andExpect(content().string("El nombre es obligatorio\n"));
+    }
+
+    @Test
+    public void crearUsuario1ApellidoVacio() throws Exception{
+        ObjectMapper mapper = new ObjectMapper();
+        User usuario = new User("amanda@lamejor.es","Amanda","","Rodriguez",Role.PROFESSOR);        
+        String json = mapper.writeValueAsString(usuario);
+        when(this.userService.register(any(UserDao.class))).thenReturn(null);
+        this.mockMvc.perform(post("/api/users")
+                    .contentType("application/json").content(json))
+                    .andDo(print())
+                    .andExpect(status().is(422))
+                    .andExpect(content().string("El primer apellido es obligatorio\n"));
+    }
+
+    @Test
+    public void modificarUsuario() throws Exception{
+        ObjectMapper mapper = new ObjectMapper();
+        User usuario = new User("amanda@lamejor.es","Amanda","Navas","Rodriguez",Role.PROFESSOR);        
+        Map<String, Object> usuarioModificado = new HashMap<>();
+        usuarioModificado.put("email", "homer@jsimpson.es");
+        usuario.setEmail("homer@jsimpson.es");
+        String json = mapper.writeValueAsString(usuario);
+        String jsonModificado = mapper.writeValueAsString(usuarioModificado);
+        when(userService.updateUser(3, usuarioModificado) ).thenReturn(usuario);
+        this.mockMvc.perform(post("/api/users")
+                    .contentType("application/json").content(jsonModificado))
+                    .andDo(print())
+                    .andExpect(status().isOk())
+                    .andExpect(content().json(json));
+    }
+
 }
